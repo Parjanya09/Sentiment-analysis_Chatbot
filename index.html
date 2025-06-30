@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MoodBot - Smart Sentiment Chatbot</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Mood Analysis - Chat About Your Feelings</h1>
+
+        <div class="chatbox">
+            {% for chat in chat_history %}
+                <p><strong>You:</strong> {{ chat.user }}</p>
+                <p><strong>MoodBot ({{ chat.sentiment }}):</strong> {{ chat.bot }}</p>
+                <hr>
+            {% endfor %}
+        </div>
+
+        <form method="POST">
+            <textarea name="message" placeholder="Say something..." required></textarea>
+            <button type="submit">Send</button>
+        </form>
+
+        <form action="/reset">
+            <button style="margin-top: 10px; background: rgba(252, 64, 64, 0.671);" type="submit">Reset Chat</button>
+        </form>
+
+        {% if mood_values and mood_labels %}
+            <div style="background: rgb(226, 226, 252); padding: 10px; margin: 10px 0; border-radius: 8px;">
+                <strong>Debug Mood Values:</strong> {{ mood_values }}<br>
+                <strong>Debug Mood Labels:</strong> {{ mood_labels }}
+            </div>
+
+            <h2>Mood Curve</h2>
+            <canvas id="moodChart" width="600" height="250"></canvas>
+
+            <script>
+                const moodLabels = JSON.parse('{{ mood_labels | tojson | safe }}');
+                const moodData = JSON.parse('{{ mood_values | tojson | safe }}');
+                console.log("Mood Labels:", moodLabels);
+                console.log("Mood Data:", moodData);
+
+                const ctx = document.getElementById('moodChart').getContext('2d');
+
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: moodLabels.map(i => `Msg ${i}`),
+                        datasets: [{
+                            label: 'Emotional Trend',
+                            data: moodData,
+                            borderColor: 'rgba(46, 204, 113, 1)',
+                            backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                            tension: 0.5,
+                            fill: true,
+                            pointRadius: 5,  
+                            borderWidth: 3,
+                            cubicInterpolationMode: 'monotone'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const v = context.raw;
+                                        if (v === 1) return '😊 Positive';
+                                        if (v === 0) return '😐 Neutral';
+                                        if (v === -1) return '😔 Negative';
+                                        return v;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                min: -1.5,
+                                max: 1.5,
+                                ticks: {
+                                    stepSize: 1,
+                                    callback: function(value) {
+                                        if (value === 1) return '😊 Positive';
+                                        if (value === 0) return '😐 Neutral';
+                                        if (value === -1) return '😔 Negative';
+                                        return '';
+                                    }
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Mood'
+                                },
+                                grid: {
+                                    color: '#eee'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Message Number'
+                                },
+                                grid: {
+                                    color: '#f0f0f0'
+                                }
+                            }
+                        }
+                    }
+                });
+            </script>
+        {% endif %}
+    </div>
+</body>
+</html>
